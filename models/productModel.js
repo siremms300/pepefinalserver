@@ -139,6 +139,50 @@ const productSchema = new mongoose.Schema({
         width: Number,
         height: Number
     },
+       // Delivery Settings
+    deliveryEnabled: {
+        type: Boolean,
+        default: true
+    },
+    deliverySettings: {
+        withinBarnawa: {
+            enabled: {
+                type: Boolean,
+                default: true
+            },
+            price: {
+                type: Number,
+                default: 0,
+                min: 0
+            },
+            freeThreshold: {
+                type: Number,
+                default: 0,
+                min: 0
+            }
+        },
+        outsideBarnawa: {
+            enabled: {
+                type: Boolean,
+                default: true
+            },
+            price: {
+                type: Number,
+                default: 0,
+                min: 0
+            },
+            freeThreshold: {
+                type: Number,
+                default: 0,
+                min: 0
+            }
+        },
+        pickupEnabled: {
+            type: Boolean,
+            default: true
+        }
+    },
+     
     seo: {
         title: String,
         description: String,
@@ -181,3 +225,11 @@ const ProductModel = mongoose.model("Product", productSchema);
 export default ProductModel;
 
 
+
+
+
+
+
+
+    
+ 

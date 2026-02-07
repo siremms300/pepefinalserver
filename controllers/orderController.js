@@ -12,11 +12,239 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 
 // controllers/orderController.js - Updated createOrder function
+// export const createOrder = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const { 
+//       delivery_address, 
+//       payment_method = 'cod', 
+//       notes = '', 
+//       payment_reference,
+//       cartItems // Accept cart items from frontend request
+//     } = req.body;
+
+//     // Quick validation
+//     if (!delivery_address) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Delivery address required'
+//       });
+//     }
+
+//     let orderItems = [];
+//     let subtotal = 0;
+//     let totalSavings = 0;
+
+//     // Process cart items from request
+//     if (cartItems && cartItems.length > 0) {
+//       console.log('🛒 Processing cart items from request:', cartItems);
+      
+//       for (const cartItem of cartItems) {
+//         try {
+//           // Find product in database
+//           const product = await Product.findById(cartItem.productId)
+//             .select('name price wholesalePrice wholesaleEnabled stock moq images')
+//             .lean();
+          
+//           if (!product) {
+//             return res.status(400).json({
+//               success: false,
+//               message: `Product ${cartItem.productId} not found`
+//             });
+//           }
+
+//           // Check stock availability
+//           if (cartItem.quantity > product.stock) {
+//             return res.status(400).json({
+//               success: false,
+//               message: `Only ${product.stock} available for ${product.name}`
+//             });
+//           }
+
+//           // Calculate pricing
+//           const isWholesale = product.wholesaleEnabled && cartItem.quantity >= (product.moq || 1);
+//           const currentPrice = isWholesale ? product.wholesalePrice : product.price;
+//           const itemSubtotal = currentPrice * cartItem.quantity;
+//           const savings = isWholesale ? (product.price - product.wholesalePrice) * cartItem.quantity : 0;
+
+//           subtotal += itemSubtotal;
+//           totalSavings += savings;
+
+//           orderItems.push({
+//             productId: product._id,
+//             name: product.name,
+//             image: product.images?.[0]?.url || '',
+//             quantity: cartItem.quantity,
+//             price: currentPrice,
+//             pricingTier: isWholesale ? 'wholesale' : 'retail'
+//           });
+
+//         } catch (error) {
+//           console.error('Error processing cart item:', error);
+//           return res.status(400).json({
+//             success: false,
+//             message: `Error processing item: ${error.message}`
+//           });
+//         }
+//       }
+//     } else {
+//       // Fallback: Get cart items from database (original logic)
+//       console.log('🛒 No cart items in request, querying database...');
+//       const dbCartItems = await CartProduct.find({ userId })
+//         .populate('productId', 'name price wholesalePrice wholesaleEnabled stock moq images')
+//         .lean();
+
+//       if (!dbCartItems || dbCartItems.length === 0) {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Cart is empty'
+//         });
+//       }
+
+//       for (const cartItem of dbCartItems) {
+//         const product = cartItem.productId;
+        
+//         if (!product) {
+//           return res.status(400).json({
+//             success: false,
+//             message: `Product not found for cart item ${cartItem._id}`
+//           });
+//         }
+
+//         // Check stock availability
+//         if (cartItem.quantity > product.stock) {
+//           return res.status(400).json({
+//             success: false,
+//             message: `Only ${product.stock} available for ${product.name}`
+//           });
+//         }
+
+//         // Calculate pricing
+//         const isWholesale = product.wholesaleEnabled && cartItem.quantity >= (product.moq || 1);
+//         const currentPrice = isWholesale ? product.wholesalePrice : product.price;
+//         const itemSubtotal = currentPrice * cartItem.quantity;
+//         const savings = isWholesale ? (product.price - product.wholesalePrice) * cartItem.quantity : 0;
+
+//         subtotal += itemSubtotal;
+//         totalSavings += savings;
+
+//         orderItems.push({
+//           productId: product._id,
+//           name: product.name,
+//           image: product.images?.[0]?.url || '',
+//           quantity: cartItem.quantity,
+//           price: currentPrice,
+//           pricingTier: isWholesale ? 'wholesale' : 'retail'
+//         });
+//       }
+//     }
+
+//     // Calculate shipping (free over ₦50,000)
+//     const shipping = subtotal > 50000 ? 0 : 5000;
+//     const total = subtotal + shipping;
+
+//     // Generate order ID
+//     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+//     // Create order
+//     const order = new Order({
+//       userId,
+//       orderId,
+//       items: orderItems,
+//       delivery_address,
+//       subtotal,
+//       shipping,
+//       total,
+//       totalSavings,
+//       payment_method,
+//       payment_status: payment_method === 'cod' ? 'pending' : 'pending',
+//       notes,
+//       order_status: 'pending'
+//     });
+
+//     // Handle Paystack payment
+//     if (payment_method === 'card' && payment_reference) {
+//       try {
+//         const verifyResponse = await axios.get(
+//           `https://api.paystack.co/transaction/verify/${payment_reference}`,
+//           {
+//             headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` },
+//             timeout: 5000
+//           }
+//         );
+
+//         const paymentData = verifyResponse.data.data;
+        
+//         if (paymentData.status === 'success') {
+//           const amountInNaira = paymentData.amount / 100;
+//           if (Math.abs(amountInNaira - total) > 1) {
+//             return res.status(400).json({
+//               success: false,
+//               message: 'Payment amount mismatch'
+//             });
+//           }
+
+//           order.payment_status = 'paid';
+//           order.payment_reference = payment_reference;
+
+//           // Update stock in background
+//           Product.bulkWrite(
+//             orderItems.map(item => ({
+//               updateOne: {
+//                 filter: { _id: item.productId },
+//                 update: { $inc: { stock: -item.quantity } }
+//               }
+//             }))
+//           ).catch(console.error);
+//         }
+//       } catch (error) {
+//         console.error('Paystack verification failed:', error.message);
+//         // Continue without verification for now
+//       }
+//     }
+
+//     // Save order
+//     await order.save();
+
+//     // Clear cart from database if we used database cart
+//     if (!cartItems || cartItems.length === 0) {
+//       CartProduct.deleteMany({ userId }).catch(console.error);
+//     }
+
+//     // Return response
+//     res.status(201).json({
+//       success: true,
+//       message: 'Order created successfully',
+//       data: {
+//         orderId: order.orderId,
+//         total: order.total,
+//         payment_method: order.payment_method,
+//         payment_status: order.payment_status,
+//         created_at: order.createdAt,
+//         items: order.items.length
+//       }
+//     });
+
+//     // Send emails in background
+//     sendOrderEmailsInBackground(order, req.user);
+
+//   } catch (error) {
+//     console.error('Create order error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error creating order',
+//       error: error.message
+//     });
+//   }
+// };
+
+// controllers/orderController.js - Updated createOrder function
 export const createOrder = async (req, res) => {
   try {
     const userId = req.user._id;
     const { 
       delivery_address, 
+      delivery_location = 'pickup', // Add this
       payment_method = 'cod', 
       notes = '', 
       payment_reference,
@@ -24,10 +252,17 @@ export const createOrder = async (req, res) => {
     } = req.body;
 
     // Quick validation
-    if (!delivery_address) {
+    if (!delivery_address && delivery_location !== 'pickup') {
       return res.status(400).json({
         success: false,
-        message: 'Delivery address required'
+        message: 'Delivery address required for delivery orders'
+      });
+    }
+
+    if (!delivery_location || !['pickup', 'within_barnawa', 'outside_barnawa'].includes(delivery_location)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid delivery location. Must be pickup, within_barnawa, or outside_barnawa'
       });
     }
 
@@ -43,7 +278,7 @@ export const createOrder = async (req, res) => {
         try {
           // Find product in database
           const product = await Product.findById(cartItem.productId)
-            .select('name price wholesalePrice wholesaleEnabled stock moq images')
+            .select('name price wholesalePrice wholesaleEnabled stock moq images deliverySettings')
             .lean();
           
           if (!product) {
@@ -76,7 +311,12 @@ export const createOrder = async (req, res) => {
             image: product.images?.[0]?.url || '',
             quantity: cartItem.quantity,
             price: currentPrice,
-            pricingTier: isWholesale ? 'wholesale' : 'retail'
+            pricingTier: isWholesale ? 'wholesale' : 'retail',
+            deliverySettings: product.deliverySettings || {
+              withinBarnawa: { enabled: true, price: 0, freeThreshold: 0 },
+              outsideBarnawa: { enabled: true, price: 0, freeThreshold: 0 },
+              pickupEnabled: true
+            }
           });
 
         } catch (error) {
@@ -91,7 +331,7 @@ export const createOrder = async (req, res) => {
       // Fallback: Get cart items from database (original logic)
       console.log('🛒 No cart items in request, querying database...');
       const dbCartItems = await CartProduct.find({ userId })
-        .populate('productId', 'name price wholesalePrice wholesaleEnabled stock moq images')
+        .populate('productId', 'name price wholesalePrice wholesaleEnabled stock moq images deliverySettings')
         .lean();
 
       if (!dbCartItems || dbCartItems.length === 0) {
@@ -134,13 +374,69 @@ export const createOrder = async (req, res) => {
           image: product.images?.[0]?.url || '',
           quantity: cartItem.quantity,
           price: currentPrice,
-          pricingTier: isWholesale ? 'wholesale' : 'retail'
+          pricingTier: isWholesale ? 'wholesale' : 'retail',
+          deliverySettings: product.deliverySettings || {
+            withinBarnawa: { enabled: true, price: 0, freeThreshold: 0 },
+            outsideBarnawa: { enabled: true, price: 0, freeThreshold: 0 },
+            pickupEnabled: true
+          }
         });
       }
     }
 
-    // Calculate shipping (free over ₦50,000)
-    const shipping = subtotal > 50000 ? 0 : 5000;
+    // Calculate shipping based on location
+    let shipping = 0;
+    
+    // Get delivery settings from system
+    const settings = await DeliverySettings.findOne();
+    const defaultPrices = settings?.defaultDeliveryPrices || {
+      withinBarnawa: { price: 800, freeThreshold: 500000 },
+      outsideBarnawa: { price: 1200, freeThreshold: 1000000 }
+    };
+    
+    // Check if order qualifies for free delivery based on product-specific settings
+    let shouldChargeDelivery = true;
+    
+    if (delivery_location === 'within_barnawa') {
+      if (subtotal < defaultPrices.withinBarnawa.freeThreshold) {
+        shipping = defaultPrices.withinBarnawa.price;
+      } else {
+        shouldChargeDelivery = false;
+      }
+       
+      // Check if any product has specific withinBarnawa settings
+      orderItems.forEach(item => {
+        if (item.deliverySettings?.withinBarnawa?.enabled === false) {
+          throw new Error(`${item.name} cannot be delivered within Barnawa`);
+        }
+      });
+      
+    } else if (delivery_location === 'outside_barnawa') {
+      if (subtotal < defaultPrices.outsideBarnawa.freeThreshold) {
+        shipping = defaultPrices.outsideBarnawa.price;
+      } else {
+        shouldChargeDelivery = false;
+      }
+      
+      // Check if any product has specific outsideBarnawa settings
+      orderItems.forEach(item => {
+        if (item.deliverySettings?.outsideBarnawa?.enabled === false) {
+          throw new Error(`${item.name} cannot be delivered outside Barnawa`);
+        }
+      });
+      
+    } else if (delivery_location === 'pickup') {
+      shipping = 0;
+      shouldChargeDelivery = false;
+      
+      // Check if any product has pickup disabled
+      orderItems.forEach(item => {
+        if (item.deliverySettings?.pickupEnabled === false) {
+          throw new Error(`${item.name} is not available for pickup`);
+        }
+      });
+    }
+
     const total = subtotal + shipping;
 
     // Generate order ID
@@ -151,7 +447,8 @@ export const createOrder = async (req, res) => {
       userId,
       orderId,
       items: orderItems,
-      delivery_address,
+      delivery_address: delivery_location === 'pickup' ? null : delivery_address,
+      delivery_location,
       subtotal,
       shipping,
       total,
@@ -159,7 +456,18 @@ export const createOrder = async (req, res) => {
       payment_method,
       payment_status: payment_method === 'cod' ? 'pending' : 'pending',
       notes,
-      order_status: 'pending'
+      order_status: 'pending',
+      // Add delivery specific fields
+      delivery_info: {
+        location: delivery_location,
+        fee: shipping,
+        free_delivery_threshold: delivery_location === 'within_barnawa' 
+          ? defaultPrices.withinBarnawa.freeThreshold 
+          : delivery_location === 'outside_barnawa'
+            ? defaultPrices.outsideBarnawa.freeThreshold
+            : 0,
+        qualifies_for_free_delivery: !shouldChargeDelivery
+      }
     });
 
     // Handle Paystack payment
@@ -177,10 +485,12 @@ export const createOrder = async (req, res) => {
         
         if (paymentData.status === 'success') {
           const amountInNaira = paymentData.amount / 100;
+          
+          // Allow small difference due to rounding
           if (Math.abs(amountInNaira - total) > 1) {
             return res.status(400).json({
               success: false,
-              message: 'Payment amount mismatch'
+              message: `Payment amount mismatch. Expected: ₦${total}, Received: ₦${amountInNaira}`
             });
           }
 
@@ -218,10 +528,14 @@ export const createOrder = async (req, res) => {
       data: {
         orderId: order.orderId,
         total: order.total,
+        subtotal: order.subtotal,
+        shipping: order.shipping,
+        delivery_location: order.delivery_location,
         payment_method: order.payment_method,
         payment_status: order.payment_status,
         created_at: order.createdAt,
-        items: order.items.length
+        items: order.items.length,
+        delivery_info: order.delivery_info
       }
     });
 
@@ -230,6 +544,15 @@ export const createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Create order error:', error);
+    
+    // Handle specific errors
+    if (error.message.includes('cannot be delivered') || error.message.includes('not available for pickup')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating order',
@@ -237,8 +560,6 @@ export const createOrder = async (req, res) => {
     });
   }
 };
-
-
 
 
 

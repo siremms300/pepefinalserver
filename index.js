@@ -13,6 +13,7 @@ import ProductRouter from './route/productRoute.js';
 import cartRouter from './route/cartRoutes.js'
 import orderRouter from './route/orderRoute.js';
 import addressRouter from './route/addressRoute.js';
+import deliverySettingsRouter from './route/deliverySettingsRoute.js';
 
 // Load environment variables
 dotenv.config();
@@ -45,6 +46,7 @@ app.use('/api/categories', CategoryRouter);
 app.use('/api/products', ProductRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', orderRouter);
+app.use('/api/delivery-settings', deliverySettingsRouter);
 app.use('/api/addresses', addressRouter);
 
 app.get("/", (req, res) => {
@@ -58,7 +60,7 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 
-async function startServer() {
+async function startServer() { 
   try { 
     app.listen(PORT, HOST, () => {
       console.log(`✅ Server is running on port ${PORT}`);

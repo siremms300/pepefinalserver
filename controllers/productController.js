@@ -224,160 +224,406 @@ export const getProduct = async (req, res) => {
 };
 
 // Create product
-export const createProduct = async (req, res) => {
-    try {
-        const productData = JSON.parse(req.body.productData);
-        const imageFiles = req.files?.images || [];
-        const bannerFiles = req.files?.banners || [];
+// export const createProduct = async (req, res) => {
+//     try {
+//         const productData = JSON.parse(req.body.productData);
+//         const imageFiles = req.files?.images || [];
+//         const bannerFiles = req.files?.banners || [];
 
-        // Validate category exists
-        const category = await Category.findById(productData.category);
-        if (!category) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid category'
-            });
-        }
+//         // Validate category exists
+//         const category = await Category.findById(productData.category);
+//         if (!category) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid category'
+//             });
+//         }
 
-        // Upload product images
-        const productImages = [];
-        for (const file of imageFiles) {
-            try {
-                const result = await uploadToCloudinary(file.buffer, 'products');
-                productImages.push({
-                    url: result.secure_url,
-                    public_id: result.public_id
-                });
-            } catch (uploadError) {
-                console.error('Image upload failed:', uploadError);
-                // Continue with other images even if one fails
-            }
-        }
+//         // Upload product images
+//         const productImages = [];
+//         for (const file of imageFiles) {
+//             try {
+//                 const result = await uploadToCloudinary(file.buffer, 'products');
+//                 productImages.push({
+//                     url: result.secure_url,
+//                     public_id: result.public_id
+//                 });
+//             } catch (uploadError) {
+//                 console.error('Image upload failed:', uploadError);
+//                 // Continue with other images even if one fails
+//             }
+//         }
 
-        // Upload banner images
-        const bannerImages = [];
-        for (const file of bannerFiles) {
-            try {
-                const result = await uploadToCloudinary(file.buffer, 'banners');
-                bannerImages.push({
-                    url: result.secure_url,
-                    public_id: result.public_id,
-                    title: productData.bannerTitle || ''
-                });
-            } catch (uploadError) {
-                console.error('Banner upload failed:', uploadError);
-                // Continue with other banners even if one fails
-            }
-        }
+//         // Upload banner images
+//         const bannerImages = [];
+//         for (const file of bannerFiles) {
+//             try {
+//                 const result = await uploadToCloudinary(file.buffer, 'banners');
+//                 bannerImages.push({
+//                     url: result.secure_url,
+//                     public_id: result.public_id,
+//                     title: productData.bannerTitle || ''
+//                 });
+//             } catch (uploadError) {
+//                 console.error('Banner upload failed:', uploadError);
+//                 // Continue with other banners even if one fails
+//             }
+//         }
 
-        // Create product
-        const product = new Product({
-            ...productData,
-            images: productImages,
-            banners: bannerImages,
-            createdBy: req.user._id
-        });
+//         // Create product
+//         const product = new Product({
+//             ...productData,
+//             images: productImages,
+//             banners: bannerImages,
+//             createdBy: req.user._id
+//         });
 
-        await product.save();
+//         await product.save();
 
-        // Populate the created product
-        const populatedProduct = await Product.findById(product._id)
-            .populate('category', 'name images')
-            .populate('subCategory', 'name')
-            .populate('thirdCategory', 'name')
-            .populate('createdBy', 'name email');
+//         // Populate the created product
+//         const populatedProduct = await Product.findById(product._id)
+//             .populate('category', 'name images')
+//             .populate('subCategory', 'name')
+//             .populate('thirdCategory', 'name')
+//             .populate('createdBy', 'name email');
 
-        res.status(201).json({
-            success: true,
-            message: 'Product created successfully',
-            data: populatedProduct
-        });
-    } catch (error) {
-        console.error('Product creation error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error creating product',
-            error: error.message
-        });
-    }
-};
+//         res.status(201).json({
+//             success: true,
+//             message: 'Product created successfully',
+//             data: populatedProduct
+//         });
+//     } catch (error) {
+//         console.error('Product creation error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error creating product',
+//             error: error.message
+//         });
+//     }
+// };
 
 // Update product
-export const updateProduct = async (req, res) => {
-    try {
-        const productId = req.params.id;
-        const productData = req.body.productData ? JSON.parse(req.body.productData) : {};
-        const imageFiles = req.files?.images || [];
-        const bannerFiles = req.files?.banners || [];
+// export const updateProduct = async (req, res) => {
+//     try {
+//         const productId = req.params.id;
+//         const productData = req.body.productData ? JSON.parse(req.body.productData) : {};
+//         const imageFiles = req.files?.images || [];
+//         const bannerFiles = req.files?.banners || [];
 
-        // Find existing product
-        const existingProduct = await Product.findById(productId);
-        if (!existingProduct) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
-        }
+//         // Find existing product
+//         const existingProduct = await Product.findById(productId);
+//         if (!existingProduct) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Product not found'
+//             });
+//         }
 
-        // Upload new product images
-        const newProductImages = [];
-        for (const file of imageFiles) {
-            try {
-                const result = await uploadToCloudinary(file.buffer, 'products');
-                newProductImages.push({
-                    url: result.secure_url,
-                    public_id: result.public_id
-                });
-            } catch (uploadError) {
-                console.error('Image upload failed:', uploadError);
-            }
-        }
+//         // Upload new product images
+//         const newProductImages = [];
+//         for (const file of imageFiles) {
+//             try {
+//                 const result = await uploadToCloudinary(file.buffer, 'products');
+//                 newProductImages.push({
+//                     url: result.secure_url,
+//                     public_id: result.public_id
+//                 });
+//             } catch (uploadError) {
+//                 console.error('Image upload failed:', uploadError);
+//             }
+//         }
 
-        // Upload new banner images
-        const newBannerImages = [];
-        for (const file of bannerFiles) {
-            try {
-                const result = await uploadToCloudinary(file.buffer, 'banners');
-                newBannerImages.push({
-                    url: result.secure_url,
-                    public_id: result.public_id,
-                    title: productData.bannerTitle || existingProduct.bannerTitle
-                });
-            } catch (uploadError) {
-                console.error('Banner upload failed:', uploadError);
-            }
-        }
+//         // Upload new banner images
+//         const newBannerImages = [];
+//         for (const file of bannerFiles) {
+//             try {
+//                 const result = await uploadToCloudinary(file.buffer, 'banners');
+//                 newBannerImages.push({
+//                     url: result.secure_url,
+//                     public_id: result.public_id,
+//                     title: productData.bannerTitle || existingProduct.bannerTitle
+//                 });
+//             } catch (uploadError) {
+//                 console.error('Banner upload failed:', uploadError);
+//             }
+//         }
 
-        // Update product
-        const updatedProduct = await Product.findByIdAndUpdate(
-            productId,
-            {
-                ...productData,
-                $push: {
-                    images: { $each: newProductImages },
-                    banners: { $each: newBannerImages }
-                }
-            },
-            { new: true, runValidators: true }
-        ).populate('category', 'name images')
-         .populate('subCategory', 'name')
-         .populate('thirdCategory', 'name')
-         .populate('createdBy', 'name email');
+//         // Update product
+//         const updatedProduct = await Product.findByIdAndUpdate(
+//             productId,
+//             {
+//                 ...productData,
+//                 $push: {
+//                     images: { $each: newProductImages },
+//                     banners: { $each: newBannerImages }
+//                 }
+//             },
+//             { new: true, runValidators: true }
+//         ).populate('category', 'name images')
+//          .populate('subCategory', 'name')
+//          .populate('thirdCategory', 'name')
+//          .populate('createdBy', 'name email');
 
-        res.json({
-            success: true,
-            message: 'Product updated successfully',
-            data: updatedProduct
-        });
-    } catch (error) {
-        console.error('Product update error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error updating product',
-            error: error.message
-        });
+//         res.json({
+//             success: true,
+//             message: 'Product updated successfully',
+//             data: updatedProduct
+//         });
+//     } catch (error) {
+//         console.error('Product update error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error updating product',
+//             error: error.message
+//         });
+//     }
+// };
+
+
+
+// controllers/productController.js - Updated createProduct function
+export const createProduct = async (req, res) => {
+  try {
+    const productData = JSON.parse(req.body.productData);
+    const imageFiles = req.files?.images || [];
+    const bannerFiles = req.files?.banners || [];
+
+    // Validate category exists
+    const category = await Category.findById(productData.category);
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid category'
+      });
     }
+
+    // Upload product images
+    const productImages = [];
+    for (const file of imageFiles) {
+      try {
+        const result = await uploadToCloudinary(file.buffer, 'products');
+        productImages.push({
+          url: result.secure_url,
+          public_id: result.public_id
+        });
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        // Continue with other images even if one fails
+      }
+    }
+
+    // Upload banner images
+    const bannerImages = [];
+    for (const file of bannerFiles) {
+      try {
+        const result = await uploadToCloudinary(file.buffer, 'banners');
+        bannerImages.push({
+          url: result.secure_url,
+          public_id: result.public_id,
+          title: productData.bannerTitle || ''
+        });
+      } catch (uploadError) {
+        console.error('Banner upload failed:', uploadError);
+        // Continue with other banners even if one fails
+      }
+    }
+
+    // Process delivery settings
+    const deliverySettings = {
+      withinBarnawa: {
+        enabled: productData.withinBarnawaEnabled !== undefined 
+          ? productData.withinBarnawaEnabled 
+          : true,
+        price: productData.withinBarnawaPrice || 0,
+        freeThreshold: productData.withinBarnawaFreeThreshold || 0
+      },
+      outsideBarnawa: {
+        enabled: productData.outsideBarnawaEnabled !== undefined 
+          ? productData.outsideBarnawaEnabled 
+          : true,
+        price: productData.outsideBarnawaPrice || 0,
+        freeThreshold: productData.outsideBarnawaFreeThreshold || 0
+      },
+      pickupEnabled: productData.pickupEnabled !== undefined 
+        ? productData.pickupEnabled 
+        : true
+    };
+
+    // Prepare product data
+    const productPayload = {
+      name: productData.name,
+      description: productData.description,
+      category: productData.category,
+      subCategory: productData.subCategory || undefined,
+      thirdCategory: productData.thirdCategory || undefined,
+      price: productData.price,
+      oldPrice: productData.oldPrice || undefined,
+      retailPrice: productData.retailPrice || undefined,
+      wholesalePrice: productData.wholesalePrice || undefined,
+      moq: productData.moq || 1,
+      pricingTier: productData.pricingTier || 'Standard',
+      stock: productData.stock,
+      rating: productData.rating || 0,
+      brand: productData.brand,
+      discount: productData.discount || 0,
+      size: productData.size || undefined,
+      featured: productData.featured || false,
+      wholesaleEnabled: productData.wholesaleEnabled || false,
+      status: productData.status || 'Active',
+      sku: productData.sku || undefined,
+      tags: productData.tags || [],
+      specifications: productData.specifications || {},
+      weight: productData.weight || undefined,
+      dimensions: productData.dimensions || undefined,
+      seo: productData.seo || {},
+      images: productImages,
+      banners: bannerImages,
+      bannerTitle: productData.bannerTitle || '',
+      deliveryEnabled: productData.deliveryEnabled !== undefined ? productData.deliveryEnabled : true,
+      deliverySettings: deliverySettings,
+      createdBy: req.user._id
+    };
+
+    // Create product
+    const product = new Product(productPayload);
+    await product.save();
+
+    // Populate the created product
+    const populatedProduct = await Product.findById(product._id)
+      .populate('category', 'name images')
+      .populate('subCategory', 'name')
+      .populate('thirdCategory', 'name')
+      .populate('createdBy', 'name email');
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: populatedProduct
+    });
+  } catch (error) {
+    console.error('Product creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating product',
+      error: error.message
+    });
+  }
 };
+
+
+// controllers/productController.js - Updated updateProduct function
+export const updateProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const productData = req.body.productData ? JSON.parse(req.body.productData) : {};
+    const imageFiles = req.files?.images || [];
+    const bannerFiles = req.files?.banners || [];
+
+    // Find existing product
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Upload new product images
+    const newProductImages = [];
+    for (const file of imageFiles) {
+      try {
+        const result = await uploadToCloudinary(file.buffer, 'products');
+        newProductImages.push({
+          url: result.secure_url,
+          public_id: result.public_id
+        });
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+      }
+    }
+
+    // Upload new banner images
+    const newBannerImages = [];
+    for (const file of bannerFiles) {
+      try {
+        const result = await uploadToCloudinary(file.buffer, 'banners');
+        newBannerImages.push({
+          url: result.secure_url,
+          public_id: result.public_id,
+          title: productData.bannerTitle || existingProduct.bannerTitle
+        });
+      } catch (uploadError) {
+        console.error('Banner upload failed:', uploadError);
+      }
+    }
+
+    // Process delivery settings for update
+    const updatedDeliverySettings = existingProduct.deliverySettings || {};
+    
+    if (productData.withinBarnawaEnabled !== undefined) {
+      updatedDeliverySettings.withinBarnawa = {
+        ...updatedDeliverySettings.withinBarnawa,
+        enabled: productData.withinBarnawaEnabled,
+        price: productData.withinBarnawaPrice || updatedDeliverySettings.withinBarnawa?.price || 0,
+        freeThreshold: productData.withinBarnawaFreeThreshold || updatedDeliverySettings.withinBarnawa?.freeThreshold || 0
+      };
+    }
+    
+    if (productData.outsideBarnawaEnabled !== undefined) {
+      updatedDeliverySettings.outsideBarnawa = {
+        ...updatedDeliverySettings.outsideBarnawa,
+        enabled: productData.outsideBarnawaEnabled,
+        price: productData.outsideBarnawaPrice || updatedDeliverySettings.outsideBarnawa?.price || 0,
+        freeThreshold: productData.outsideBarnawaFreeThreshold || updatedDeliverySettings.outsideBarnawa?.freeThreshold || 0
+      };
+    }
+    
+    if (productData.pickupEnabled !== undefined) {
+      updatedDeliverySettings.pickupEnabled = productData.pickupEnabled;
+    }
+
+    // Update product
+    const updatePayload = {
+      ...productData,
+      deliverySettings: updatedDeliverySettings,
+      $push: {
+        images: { $each: newProductImages },
+        banners: { $each: newBannerImages }
+      }
+    };
+
+    // Remove undefined fields
+    Object.keys(updatePayload).forEach(key => {
+      if (updatePayload[key] === undefined) {
+        delete updatePayload[key];
+      }
+    });
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      updatePayload,
+      { new: true, runValidators: true }
+    ).populate('category', 'name images')
+     .populate('subCategory', 'name')
+     .populate('thirdCategory', 'name')
+     .populate('createdBy', 'name email');
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: updatedProduct
+    });
+  } catch (error) {
+    console.error('Product update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating product',
+      error: error.message
+    });
+  }
+};
+
+
 
 // Delete product
 export const deleteProduct = async (req, res) => {
@@ -546,4 +792,4 @@ export const getProductStats = async (req, res) => {
 
 
 
-
+ 
