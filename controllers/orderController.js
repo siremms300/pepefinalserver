@@ -1,6 +1,7 @@
 
 import Order from '../models/orderModel.js';
 import CartProduct from '../models/cartProductModel.js';
+import DeliverySettings from '../models/deliverySettingsModel.js';
 import Product from '../models/productModel.js';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
