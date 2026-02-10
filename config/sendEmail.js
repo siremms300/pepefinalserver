@@ -294,7 +294,7 @@ export const orderNotificationTemplate = ({ orderId, customerName, customerEmail
             </ul>
             
             <p>
-                <a href="${process.env.ADMIN_URL || 'http://localhost:5173/admin'}/orders" 
+                <a href="https://pepesbrunchandcafe.com/dashboard/admin/orders" 
                    style="background: #ff8dc1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     👉 View Order in Admin Panel
                 </a>

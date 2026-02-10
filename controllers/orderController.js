@@ -397,11 +397,11 @@ export const createOrder = async (req, res) => {
     
     // Check if order qualifies for free delivery based on product-specific settings
     let shouldChargeDelivery = true;
-    
+     
     if (delivery_location === 'within_barnawa') {
       if (subtotal < defaultPrices.withinBarnawa.freeThreshold) {
         shipping = defaultPrices.withinBarnawa.price;
-      } else {
+      } else { 
         shouldChargeDelivery = false;
       }
        
